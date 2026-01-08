@@ -24,6 +24,11 @@ mkdir -p "$APP_BUNDLE/Contents/Resources"
 # Copy executable
 cp "ClaudeIndicator/.build/release/ClaudeIndicator" "$APP_BUNDLE/Contents/MacOS/"
 
+# Copy icon if exists
+if [ -f "AppIcon.icns" ]; then
+    cp "AppIcon.icns" "$APP_BUNDLE/Contents/Resources/"
+fi
+
 # Create Info.plist
 cat > "$APP_BUNDLE/Contents/Info.plist" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -44,6 +49,8 @@ cat > "$APP_BUNDLE/Contents/Info.plist" << 'EOF'
     <string>Claude Indicator</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleShortVersionString</key>
     <string>1.0.0</string>
     <key>CFBundleVersion</key>

@@ -35,13 +35,18 @@ func createIcon(size: CGFloat) -> NSImage {
     let ringRadius = size * 0.35
     let ringWidth = size * 0.08
 
+    // Green color (matching user's preference)
+    let mainColor = NSColor(red: 0.2, green: 0.8, blue: 0.4, alpha: 1.0)
+    let glowColor = NSColor(red: 0.2, green: 0.8, blue: 0.4, alpha: 0.1)
+    let brightColor = NSColor(red: 0.4, green: 0.9, blue: 0.5, alpha: 0.8)
+
     // Glow
     for i in stride(from: 5, through: 1, by: -1) {
         let glowPath = NSBezierPath()
         let glowRadius = ringRadius + CGFloat(i) * ringWidth * 0.3
         glowPath.appendArc(withCenter: center, radius: glowRadius, startAngle: 0, endAngle: 360)
         glowPath.lineWidth = ringWidth * 0.5
-        NSColor(red: 1.0, green: 0.23, blue: 0.19, alpha: 0.1).setStroke()
+        glowColor.setStroke()
         glowPath.stroke()
     }
 
@@ -57,7 +62,7 @@ func createIcon(size: CGFloat) -> NSImage {
         let path = NSBezierPath()
         path.appendArc(withCenter: center, radius: ringRadius + offset, startAngle: 0, endAngle: 360)
         path.lineWidth = ringWidth * 0.4
-        NSColor(red: 1.0, green: 0.23, blue: 0.19, alpha: alpha).setStroke()
+        mainColor.withAlphaComponent(alpha).setStroke()
         path.stroke()
     }
 
@@ -65,14 +70,14 @@ func createIcon(size: CGFloat) -> NSImage {
     let innerRing = NSBezierPath()
     innerRing.appendArc(withCenter: center, radius: ringRadius - ringWidth * 0.2, startAngle: 0, endAngle: 360)
     innerRing.lineWidth = ringWidth * 0.3
-    NSColor(red: 1.0, green: 0.4, blue: 0.35, alpha: 0.8).setStroke()
+    brightColor.setStroke()
     innerRing.stroke()
 
     // Center dot
     let dotRadius = size * 0.06
     let dotPath = NSBezierPath(ovalIn: NSRect(x: center.x - dotRadius, y: center.y - dotRadius,
                                                width: dotRadius * 2, height: dotRadius * 2))
-    NSColor(red: 1.0, green: 0.23, blue: 0.19, alpha: 1.0).setFill()
+    mainColor.setFill()
     dotPath.fill()
 
     image.unlockFocus()
