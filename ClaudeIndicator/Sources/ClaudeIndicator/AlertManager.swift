@@ -7,13 +7,15 @@ struct Alert: Hashable {
     let screenID: CGDirectDisplayID
     let timestamp: Date
     let suppressRing: Bool
+    let suppressPanel: Bool
 
-    init(pid: pid_t, screenID: CGDirectDisplayID, timestamp: Date = Date(), suppressRing: Bool = false) {
+    init(pid: pid_t, screenID: CGDirectDisplayID, timestamp: Date = Date(), suppressRing: Bool = false, suppressPanel: Bool = false) {
         self.id = "\(pid)-\(screenID)-\(timestamp.timeIntervalSince1970)"
         self.pid = pid
         self.screenID = screenID
         self.timestamp = timestamp
         self.suppressRing = suppressRing
+        self.suppressPanel = suppressPanel
     }
 
     func hash(into hasher: inout Hasher) {
@@ -53,8 +55,8 @@ class AlertManager: ObservableObject {
         return CGFloat(settings.ringThickness) + CGFloat(max(0, count - 1)) * CGFloat(settings.thicknessIncrement)
     }
 
-    func addAlert(pid: pid_t, screenID: CGDirectDisplayID, suppressRing: Bool = false) {
-        let alert = Alert(pid: pid, screenID: screenID, timestamp: Date(), suppressRing: suppressRing)
+    func addAlert(pid: pid_t, screenID: CGDirectDisplayID, suppressRing: Bool = false, suppressPanel: Bool = false) {
+        let alert = Alert(pid: pid, screenID: screenID, timestamp: Date(), suppressRing: suppressRing, suppressPanel: suppressPanel)
 
         // If alert already exists, just reset its timer
         if let existingAlert = alerts.first(where: { $0.pid == pid && $0.screenID == screenID }) {
@@ -132,6 +134,15 @@ class AlertManager: ObservableObject {
     /// Screen IDs that have alerts with ring enabled (not suppressed)
     func screenIDsWithRing() -> Set<CGDirectDisplayID> {
         Set(alerts.filter { !$0.suppressRing }.map { $0.screenID })
+    }
+
+    /// Alerts that should show the panel (not suppressed)
+    var panelAlerts: [Alert] {
+        alerts.filter { !$0.suppressPanel }
+    }
+
+    var hasPanelAlerts: Bool {
+        !panelAlerts.isEmpty
     }
 }
 

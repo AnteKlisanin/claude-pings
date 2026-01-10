@@ -20,6 +20,8 @@ class Settings: ObservableObject {
         static let soundName = "soundName"
         static let panelPosition = "panelPosition"
         static let focusDetectionEnabled = "focusDetectionEnabled"
+        static let suppressRingWhenFocused = "suppressRingWhenFocused"
+        static let suppressPanelWhenFocused = "suppressPanelWhenFocused"
     }
 
     enum PanelPosition: String, CaseIterable {
@@ -110,6 +112,14 @@ class Settings: ObservableObject {
         didSet { UserDefaults.standard.set(focusDetectionEnabled, forKey: Keys.focusDetectionEnabled) }
     }
 
+    @Published var suppressRingWhenFocused: Bool {
+        didSet { UserDefaults.standard.set(suppressRingWhenFocused, forKey: Keys.suppressRingWhenFocused) }
+    }
+
+    @Published var suppressPanelWhenFocused: Bool {
+        didSet { UserDefaults.standard.set(suppressPanelWhenFocused, forKey: Keys.suppressPanelWhenFocused) }
+    }
+
     // Available system sounds
     static let availableSounds = [
         "Blow", "Bottle", "Frog", "Funk", "Glass", "Hero",
@@ -133,6 +143,8 @@ class Settings: ObservableObject {
         self.soundName = UserDefaults.standard.string(forKey: Keys.soundName) ?? "Glass"
         self.panelPosition = PanelPosition(rawValue: UserDefaults.standard.string(forKey: Keys.panelPosition) ?? "") ?? .topRight
         self.focusDetectionEnabled = UserDefaults.standard.object(forKey: Keys.focusDetectionEnabled) as? Bool ?? true
+        self.suppressRingWhenFocused = UserDefaults.standard.object(forKey: Keys.suppressRingWhenFocused) as? Bool ?? true
+        self.suppressPanelWhenFocused = UserDefaults.standard.object(forKey: Keys.suppressPanelWhenFocused) as? Bool ?? false
     }
 
     var nsColor: NSColor {

@@ -44,13 +44,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Check if the terminal is already focused (only if focus detection is enabled)
         let terminalIsFocused = settings.focusDetectionEnabled && WindowLocator.shared.isTerminalFocused(for: pid)
 
+        // Determine what to suppress based on settings
+        let suppressRing = terminalIsFocused && settings.suppressRingWhenFocused
+        let suppressPanel = terminalIsFocused && settings.suppressPanelWhenFocused
+
         // Find which screen the terminal window is on
         let screen = WindowLocator.shared.findScreen(for: pid)
         let screenID = screen?.displayID ?? NSScreen.main?.displayID ?? 0
 
         // Add alert for this PID and screen
-        // Pass whether terminal is focused so ring can be suppressed but panel still shown
-        AlertManager.shared.addAlert(pid: pid, screenID: screenID, suppressRing: terminalIsFocused)
+        AlertManager.shared.addAlert(pid: pid, screenID: screenID, suppressRing: suppressRing, suppressPanel: suppressPanel)
     }
 
     private func showSettingsWindow() {

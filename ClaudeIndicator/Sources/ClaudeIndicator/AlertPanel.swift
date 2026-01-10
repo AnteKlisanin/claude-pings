@@ -23,7 +23,7 @@ class AlertPanelController {
             return
         }
 
-        if alertManager.hasActiveAlerts {
+        if alertManager.hasPanelAlerts {
             showPanel()
         } else {
             hidePanel()
@@ -94,7 +94,7 @@ class AlertPanelController {
     }
 
     private func updateContent() {
-        let alerts = Array(alertManager.alerts)
+        let alerts = alertManager.panelAlerts
         let view = AlertPanelView(alerts: alerts) { [weak self] alert in
             self?.activateAndDismiss(alert: alert)
         }

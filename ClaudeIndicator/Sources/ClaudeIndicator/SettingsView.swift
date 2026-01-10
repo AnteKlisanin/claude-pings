@@ -262,7 +262,7 @@ struct SettingsView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Focus detection")
-                                Text("Suppress pings when terminal is already in focus")
+                                Text("Detect when terminal is already in focus")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -270,6 +270,28 @@ struct SettingsView: View {
                             Toggle("", isOn: $settings.focusDetectionEnabled)
                                 .toggleStyle(.switch)
                                 .labelsHidden()
+                        }
+                    }
+
+                    if settings.focusDetectionEnabled {
+                        SettingsRow {
+                            HStack {
+                                Text("Suppress ring when focused")
+                                Spacer()
+                                Toggle("", isOn: $settings.suppressRingWhenFocused)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                            }
+                        }
+
+                        SettingsRow {
+                            HStack {
+                                Text("Suppress panel when focused")
+                                Spacer()
+                                Toggle("", isOn: $settings.suppressPanelWhenFocused)
+                                    .toggleStyle(.switch)
+                                    .labelsHidden()
+                            }
                         }
                     }
                 }
