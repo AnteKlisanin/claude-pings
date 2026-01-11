@@ -39,7 +39,7 @@ struct SettingsView: View {
                 }
                 .tag(4)
         }
-        .frame(minWidth: 500, idealWidth: 540, minHeight: 550, idealHeight: 620)
+        .frame(minWidth: 580, idealWidth: 620, minHeight: 550, idealHeight: 620)
     }
 
     // MARK: - Appearance Tab
@@ -340,29 +340,10 @@ struct SettingsView: View {
                     }
                 }
 
-                // Recent Projects
-                if !projectsManager.activeRecentProjects.isEmpty {
-                    SettingsSection(title: "Recent Projects", icon: "clock") {
-                        ForEach(projectsManager.activeRecentProjects.prefix(5)) { project in
-                            ProjectRow(project: project, manager: projectsManager)
-                        }
-                    }
-                }
-
-                // Forgotten Projects
-                if !projectsManager.forgottenProjects.isEmpty {
-                    SettingsSection(title: "Forgotten Projects", icon: "moon.zzz") {
-                        ForEach(projectsManager.forgottenProjects) { project in
-                            ProjectRow(project: project, manager: projectsManager, showDelete: true)
-                        }
-                    }
-                }
-
-                // Completed Projects
-                let completedProjects = projectsManager.projects.filter { $0.status == .completed }
-                if !completedProjects.isEmpty {
-                    SettingsSection(title: "Completed", icon: "checkmark.circle") {
-                        ForEach(completedProjects) { project in
+                // All Projects
+                if !projectsManager.projects.isEmpty {
+                    SettingsSection(title: "All Projects", icon: "folder.fill") {
+                        ForEach(projectsManager.projects) { project in
                             ProjectRow(project: project, manager: projectsManager, showDelete: true)
                         }
                     }
@@ -719,7 +700,8 @@ struct ProjectRow: View {
     var showDelete: Bool = false
 
     @State private var isHovered = false
-    @State private var showingStatusMenu = false
+    @State private var isRenaming = false
+    @State private var newName = ""
 
     var body: some View {
         SettingsRow {
@@ -731,9 +713,18 @@ struct ProjectRow: View {
 
                 // Project info
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(project.name)
+                    if isRenaming {
+                        TextField("Project name", text: $newName, onCommit: {
+                            manager.renameProject(project, newName: newName)
+                            isRenaming = false
+                        })
+                        .textFieldStyle(.plain)
                         .fontWeight(.medium)
-                        .lineLimit(1)
+                    } else {
+                        Text(project.displayName)
+                            .fontWeight(.medium)
+                            .lineLimit(1)
+                    }
 
                     HStack(spacing: 8) {
                         Text(timeAgo(project.lastActivity))
@@ -753,7 +744,7 @@ struct ProjectRow: View {
                 Spacer()
 
                 // Action buttons (show on hover)
-                if isHovered {
+                if isHovered && !isRenaming {
                     HStack(spacing: 4) {
                         Button(action: { manager.openInFinder(project) }) {
                             Image(systemName: "folder")
@@ -770,6 +761,15 @@ struct ProjectRow: View {
                         .help("Open in Terminal")
 
                         Menu {
+                            Button(action: {
+                                newName = project.customName ?? project.name
+                                isRenaming = true
+                            }) {
+                                Label("Rename", systemImage: "pencil")
+                            }
+
+                            Divider()
+
                             ForEach(ClaudeProject.ProjectStatus.allCases, id: \.self) { status in
                                 Button(action: { manager.updateStatus(project, status: status) }) {
                                     Label(status.displayName, systemImage: status.icon)

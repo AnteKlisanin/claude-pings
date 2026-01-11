@@ -8,14 +8,16 @@ struct Alert: Hashable {
     let timestamp: Date
     let suppressRing: Bool
     let suppressPanel: Bool
+    let projectName: String?
 
-    init(pid: pid_t, screenID: CGDirectDisplayID, timestamp: Date = Date(), suppressRing: Bool = false, suppressPanel: Bool = false) {
+    init(pid: pid_t, screenID: CGDirectDisplayID, timestamp: Date = Date(), suppressRing: Bool = false, suppressPanel: Bool = false, projectName: String? = nil) {
         self.id = "\(pid)-\(screenID)-\(timestamp.timeIntervalSince1970)"
         self.pid = pid
         self.screenID = screenID
         self.timestamp = timestamp
         self.suppressRing = suppressRing
         self.suppressPanel = suppressPanel
+        self.projectName = projectName
     }
 
     func hash(into hasher: inout Hasher) {
@@ -56,7 +58,9 @@ class AlertManager: ObservableObject {
     }
 
     func addAlert(pid: pid_t, screenID: CGDirectDisplayID, suppressRing: Bool = false, suppressPanel: Bool = false) {
-        let alert = Alert(pid: pid, screenID: screenID, timestamp: Date(), suppressRing: suppressRing, suppressPanel: suppressPanel)
+        // Try to get project info from the working directory
+        let projectName = resolveProjectName(for: pid)
+        let alert = Alert(pid: pid, screenID: screenID, timestamp: Date(), suppressRing: suppressRing, suppressPanel: suppressPanel, projectName: projectName)
 
         // If alert already exists, just reset its timer
         if let existingAlert = alerts.first(where: { $0.pid == pid && $0.screenID == screenID }) {
@@ -143,6 +147,73 @@ class AlertManager: ObservableObject {
 
     var hasPanelAlerts: Bool {
         !panelAlerts.isEmpty
+    }
+}
+
+extension AlertManager {
+    /// Get working directory of a process using lsof
+    private func getWorkingDirectory(for pid: pid_t) -> String? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
+        process.arguments = ["-p", "\(pid)", "-Fn", "-a", "-d", "cwd"]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8) {
+                // Output format: "p<pid>\nn<path>"
+                let lines = output.components(separatedBy: "\n")
+                for line in lines {
+                    if line.hasPrefix("n") && line.count > 1 {
+                        return String(line.dropFirst())
+                    }
+                }
+            }
+        } catch {
+            print("Failed to get working directory: \(error)")
+        }
+        return nil
+    }
+
+    /// Resolve project name for a given PID
+    private func resolveProjectName(for pid: pid_t) -> String? {
+        guard let workingDir = getWorkingDirectory(for: pid) else {
+            return nil
+        }
+
+        // Try to match to a tracked project
+        let projects = ProjectsManager.shared.projects
+        if let project = projects.first(where: { workingDir.hasPrefix($0.path) }) {
+            return project.displayName
+        }
+
+        // If not tracked, derive a name from the path
+        return deriveProjectName(from: workingDir)
+    }
+
+    private func deriveProjectName(from path: String) -> String {
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
+        var displayPath = path
+        if displayPath.hasPrefix(homeDir) {
+            displayPath = String(displayPath.dropFirst(homeDir.count))
+            if displayPath.hasPrefix("/") {
+                displayPath = String(displayPath.dropFirst())
+            }
+        }
+
+        let components = displayPath.split(separator: "/")
+        if components.count >= 2 {
+            return components.suffix(2).joined(separator: "/")
+        } else if let last = components.last {
+            return String(last)
+        }
+        return URL(fileURLWithPath: path).lastPathComponent
     }
 }
 

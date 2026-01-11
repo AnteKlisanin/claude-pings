@@ -5,11 +5,16 @@ struct ClaudeProject: Identifiable, Codable {
     var id: String { path }
     let path: String
     let name: String
+    var customName: String?
     var firstSeen: Date
     var lastActivity: Date
     var sessionCount: Int
     var status: ProjectStatus
     var notes: String
+
+    var displayName: String {
+        customName ?? name
+    }
 
     enum ProjectStatus: String, Codable, CaseIterable {
         case active = "active"
@@ -99,6 +104,9 @@ class ProjectsManager: ObservableObject {
             // Skip if it's not a real project path
             guard projectPath.hasPrefix("/") else { continue }
 
+            // Skip home directory - not a real project
+            guard !isHomeDirectory(projectPath) else { continue }
+
             // Get session count and last activity from .jsonl files
             let (sessionCount, lastActivity) = getSessionInfo(for: folderURL)
 
@@ -112,7 +120,8 @@ class ProjectsManager: ObservableObject {
                 // New project discovered
                 let project = ClaudeProject(
                     path: projectPath,
-                    name: URL(fileURLWithPath: projectPath).lastPathComponent,
+                    name: deriveProjectName(projectPath),
+                    customName: nil,
                     firstSeen: lastActivity,
                     lastActivity: lastActivity,
                     sessionCount: sessionCount,
@@ -162,6 +171,33 @@ class ProjectsManager: ObservableObject {
     private func encodeProjectPath(_ path: String) -> String {
         // Convert "/Users/ak/Code/project" to "-Users-ak-Code-project"
         return path.replacingOccurrences(of: "/", with: "-")
+    }
+
+    private func deriveProjectName(_ path: String) -> String {
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
+
+        // Remove home directory prefix and show last 2 components
+        var displayPath = path
+        if displayPath.hasPrefix(homeDir) {
+            displayPath = String(displayPath.dropFirst(homeDir.count))
+            if displayPath.hasPrefix("/") {
+                displayPath = String(displayPath.dropFirst())
+            }
+        }
+
+        // Get last 2 path components for context
+        let components = displayPath.split(separator: "/")
+        if components.count >= 2 {
+            return components.suffix(2).joined(separator: "/")
+        } else if let last = components.last {
+            return String(last)
+        }
+        return URL(fileURLWithPath: path).lastPathComponent
+    }
+
+    private func isHomeDirectory(_ path: String) -> Bool {
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser.path
+        return path == homeDir || path == homeDir + "/"
     }
 
     // MARK: - Session Info
@@ -239,6 +275,13 @@ class ProjectsManager: ObservableObject {
     func updateNotes(_ project: ClaudeProject, notes: String) {
         guard let index = projects.firstIndex(where: { $0.id == project.id }) else { return }
         projects[index].notes = notes
+        saveProjects()
+        objectWillChange.send()
+    }
+
+    func renameProject(_ project: ClaudeProject, newName: String) {
+        guard let index = projects.firstIndex(where: { $0.id == project.id }) else { return }
+        projects[index].customName = newName.isEmpty ? nil : newName
         saveProjects()
         objectWillChange.send()
     }

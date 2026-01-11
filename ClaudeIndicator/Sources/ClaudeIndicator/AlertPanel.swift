@@ -134,13 +134,21 @@ struct AlertPanelView: View {
     let alerts: [Alert]
     let onAlertClicked: (Alert) -> Void
 
+    private var headerText: String {
+        if alerts.count == 1, let alert = alerts.first, let projectName = alert.projectName {
+            return "Ping from \(projectName)"
+        }
+        return alerts.count == 1 ? "Claude pinged you" : "Claude pinged you (\(alerts.count))"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "hand.wave.fill")
                     .foregroundColor(.orange)
-                Text("Claude pinged you")
+                Text(headerText)
                     .font(.headline)
+                    .lineLimit(1)
                 Spacer()
             }
             .padding(.horizontal, 12)
@@ -213,15 +221,7 @@ struct AlertButton: View {
     }
 
     private var terminalName: String {
-        if let app = NSRunningApplication(processIdentifier: alert.pid) {
-            return app.localizedName ?? "Terminal"
-        }
-        // Try to find parent terminal app
-        if let terminalPID = WindowLocator.shared.findTerminalPID(for: alert.pid),
-           let app = NSRunningApplication(processIdentifier: terminalPID) {
-            return app.localizedName ?? "Terminal"
-        }
-        return "Terminal (PID: \(alert.pid))"
+        alert.projectName ?? "Unknown project"
     }
 
     private var timeAgo: String {

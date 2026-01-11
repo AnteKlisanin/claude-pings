@@ -187,7 +187,7 @@ class StatusBarController: NSObject, NSMenuDelegate {
         projectsSubmenu.addItem(recentHeader)
 
         for project in recentProjects {
-            let item = NSMenuItem(title: "  \(project.name)", action: #selector(openProjectInTerminal(_:)), keyEquivalent: "")
+            let item = NSMenuItem(title: "  \(project.displayName)", action: #selector(openProjectInTerminal(_:)), keyEquivalent: "")
             item.target = self
             item.representedObject = project
             item.image = statusIcon(for: project.status)
