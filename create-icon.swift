@@ -119,39 +119,42 @@ func createIcon(size: CGFloat) -> NSImage {
         path.stroke()
     }
 
-    // Center infinity symbol
-    let infinityWidth = size * 0.18
-    let infinityHeight = size * 0.09
-    let lineWidth = size * 0.025
+    // Center infinity symbol with Siri colors
+    let infinityWidth = size * 0.28
+    let infinityHeight = size * 0.14
+    let lineWidth = size * 0.032
 
-    let infinityPath = NSBezierPath()
+    // Draw infinity with gradient segments
+    let infinitySegments = 48
+    for i in 0..<infinitySegments {
+        let t = CGFloat(i) / CGFloat(infinitySegments)
+        let nextT = CGFloat(i + 1) / CGFloat(infinitySegments)
 
-    // Draw infinity symbol (two connected loops)
-    // Left loop
-    let leftCenter = NSPoint(x: center.x - infinityWidth * 0.25, y: center.y)
-    let loopRadius = infinityHeight * 0.5
+        // Map t to angle for figure-8 path
+        let angle = t * 2 * .pi
+        let nextAngle = nextT * 2 * .pi
 
-    // Right loop
-    let rightCenter = NSPoint(x: center.x + infinityWidth * 0.25, y: center.y)
+        // Parametric equation for figure-8 / infinity
+        func infinityPoint(_ a: CGFloat) -> NSPoint {
+            let x = center.x + infinityWidth * 0.4 * cos(a)
+            let y = center.y + infinityHeight * 0.5 * sin(2 * a) / 2
+            return NSPoint(x: x, y: y)
+        }
 
-    // Create figure-8 path
-    infinityPath.move(to: center)
+        let p1 = infinityPoint(angle)
+        let p2 = infinityPoint(nextAngle)
 
-    // Right loop (clockwise)
-    infinityPath.appendArc(withCenter: rightCenter, radius: loopRadius,
-                           startAngle: 180, endAngle: -180, clockwise: true)
+        let path = NSBezierPath()
+        path.move(to: p1)
+        path.line(to: p2)
+        path.lineWidth = lineWidth
+        path.lineCapStyle = .round
 
-    // Left loop (counter-clockwise)
-    infinityPath.appendArc(withCenter: leftCenter, radius: loopRadius,
-                           startAngle: 0, endAngle: 360, clockwise: false)
-
-    infinityPath.lineWidth = lineWidth
-    infinityPath.lineCapStyle = .round
-    infinityPath.lineJoinStyle = .round
-
-    // Draw with a nice purple/blue gradient color
-    NSColor(red: 0.6, green: 0.5, blue: 0.95, alpha: 0.9).setStroke()
-    infinityPath.stroke()
+        // Use siri colors mapped to position
+        let colorIndex = Int(t * CGFloat(colorCount)) % colorCount
+        siriColors[colorIndex].setStroke()
+        path.stroke()
+    }
 
     image.unlockFocus()
 
