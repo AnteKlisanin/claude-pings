@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var settings: Settings
     @StateObject private var resourcesManager = ResourcesManager.shared
+    @StateObject private var projectsManager = ProjectsManager.shared
     @State private var showingPreview = false
     @State private var selectedTab = 0
 
@@ -20,19 +21,25 @@ struct SettingsView: View {
                 }
                 .tag(1)
 
+            projectsTab
+                .tabItem {
+                    Label("Projects", systemImage: "folder")
+                }
+                .tag(2)
+
             resourcesTab
                 .tabItem {
                     Label("Resources", systemImage: "server.rack")
                 }
-                .tag(2)
+                .tag(3)
 
             integrationTab
                 .tabItem {
                     Label("Integration", systemImage: "link")
                 }
-                .tag(3)
+                .tag(4)
         }
-        .frame(minWidth: 450, idealWidth: 500, minHeight: 500, idealHeight: 560)
+        .frame(minWidth: 450, idealWidth: 520, minHeight: 500, idealHeight: 600)
     }
 
     // MARK: - Appearance Tab
@@ -298,6 +305,79 @@ struct SettingsView: View {
                                 Toggle("", isOn: $settings.suppressPanelWhenFocused)
                                     .toggleStyle(.switch)
                                     .labelsHidden()
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+        }
+    }
+
+    // MARK: - Projects Tab
+
+    private var projectsTab: some View {
+        ScrollView {
+            VStack(spacing: 1) {
+                // Summary
+                SettingsSection(title: "Overview", icon: "chart.bar") {
+                    SettingsRow {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("\(projectsManager.projects.count) projects tracked")
+                                    .fontWeight(.medium)
+                                Text("\(projectsManager.totalSessions) total sessions")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Button(action: { projectsManager.loadProjects() }) {
+                                Image(systemName: "arrow.clockwise")
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                // Recent Projects
+                if !projectsManager.activeRecentProjects.isEmpty {
+                    SettingsSection(title: "Recent Projects", icon: "clock") {
+                        ForEach(projectsManager.activeRecentProjects.prefix(5)) { project in
+                            ProjectRow(project: project, manager: projectsManager)
+                        }
+                    }
+                }
+
+                // Forgotten Projects
+                if !projectsManager.forgottenProjects.isEmpty {
+                    SettingsSection(title: "Forgotten Projects", icon: "moon.zzz") {
+                        ForEach(projectsManager.forgottenProjects) { project in
+                            ProjectRow(project: project, manager: projectsManager, showDelete: true)
+                        }
+                    }
+                }
+
+                // Completed Projects
+                let completedProjects = projectsManager.projects.filter { $0.status == .completed }
+                if !completedProjects.isEmpty {
+                    SettingsSection(title: "Completed", icon: "checkmark.circle") {
+                        ForEach(completedProjects) { project in
+                            ProjectRow(project: project, manager: projectsManager, showDelete: true)
+                        }
+                    }
+                }
+
+                // Empty state
+                if projectsManager.projects.isEmpty {
+                    SettingsSection(title: "No Projects", icon: "folder") {
+                        SettingsRow {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("No Claude projects found yet.")
+                                    .foregroundColor(.secondary)
+                                Text("Projects will appear here as you use Claude Code in different directories.")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
                         }
                     }
@@ -629,6 +709,120 @@ struct InfoRow: View {
             Text(text)
                 .font(.caption)
                 .foregroundColor(.secondary)
+        }
+    }
+}
+
+struct ProjectRow: View {
+    let project: ClaudeProject
+    @ObservedObject var manager: ProjectsManager
+    var showDelete: Bool = false
+
+    @State private var isHovered = false
+    @State private var showingStatusMenu = false
+
+    var body: some View {
+        SettingsRow {
+            HStack(spacing: 10) {
+                // Status indicator
+                Image(systemName: project.status.icon)
+                    .foregroundColor(statusColor)
+                    .font(.system(size: 14))
+
+                // Project info
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(project.name)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+
+                    HStack(spacing: 8) {
+                        Text(timeAgo(project.lastActivity))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Text("•")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        Text("\(project.sessionCount) sessions")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                // Action buttons (show on hover)
+                if isHovered {
+                    HStack(spacing: 4) {
+                        Button(action: { manager.openInFinder(project) }) {
+                            Image(systemName: "folder")
+                                .font(.system(size: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open in Finder")
+
+                        Button(action: { manager.openInTerminal(project) }) {
+                            Image(systemName: "terminal")
+                                .font(.system(size: 12))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open in Terminal")
+
+                        Menu {
+                            ForEach(ClaudeProject.ProjectStatus.allCases, id: \.self) { status in
+                                Button(action: { manager.updateStatus(project, status: status) }) {
+                                    Label(status.displayName, systemImage: status.icon)
+                                }
+                            }
+
+                            Divider()
+
+                            if showDelete {
+                                Button(action: { manager.hideProject(project) }) {
+                                    Label("Hide from list", systemImage: "eye.slash")
+                                }
+
+                                Button(role: .destructive, action: { manager.deleteProjectData(project) }) {
+                                    Label("Delete session data", systemImage: "trash")
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.system(size: 12))
+                        }
+                        .menuStyle(.borderlessButton)
+                        .frame(width: 20)
+                    }
+                }
+            }
+        }
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+
+    private var statusColor: Color {
+        switch project.status {
+        case .active: return .green
+        case .paused: return .orange
+        case .completed: return .gray
+        }
+    }
+
+    private func timeAgo(_ date: Date) -> String {
+        let seconds = Int(-date.timeIntervalSinceNow)
+        if seconds < 60 {
+            return "Just now"
+        } else if seconds < 3600 {
+            let minutes = seconds / 60
+            return "\(minutes)m ago"
+        } else if seconds < 86400 {
+            let hours = seconds / 3600
+            return "\(hours)h ago"
+        } else {
+            let days = seconds / 86400
+            return "\(days)d ago"
         }
     }
 }

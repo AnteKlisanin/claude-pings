@@ -8,6 +8,7 @@ class StatusBarController: NSObject, NSMenuDelegate {
     private let settings = Settings.shared
     private let stats = StatsManager.shared
     private let resources = ResourcesManager.shared
+    private let projects = ProjectsManager.shared
 
     // Menu items that need updating
     private var ringToggleItem: NSMenuItem!
@@ -24,6 +25,10 @@ class StatusBarController: NSObject, NSMenuDelegate {
     // Resources menu items
     private var resourcesHeaderItem: NSMenuItem!
     private var resourcesSubmenu: NSMenu!
+
+    // Projects menu items
+    private var projectsHeaderItem: NSMenuItem!
+    private var projectsSubmenu: NSMenu!
 
     var onSettingsClicked: (() -> Void)?
 
@@ -70,6 +75,13 @@ class StatusBarController: NSObject, NSMenuDelegate {
         menu.addItem(statsStreakItem)
 
         menu.addItem(NSMenuItem.separator())
+
+        // Projects section
+        projectsHeaderItem = NSMenuItem(title: "Projects", action: nil, keyEquivalent: "")
+        projectsHeaderItem.image = NSImage(systemSymbolName: "folder", accessibilityDescription: nil)
+        projectsSubmenu = NSMenu()
+        projectsHeaderItem.submenu = projectsSubmenu
+        menu.addItem(projectsHeaderItem)
 
         // Resources section
         resourcesHeaderItem = NSMenuItem(title: "Resources", action: nil, keyEquivalent: "")
@@ -126,6 +138,7 @@ class StatusBarController: NSObject, NSMenuDelegate {
 
     func menuWillOpen(_ menu: NSMenu) {
         updateStatsDisplay()
+        updateProjectsDisplay()
         updateResourcesDisplay()
     }
 
@@ -151,6 +164,61 @@ class StatusBarController: NSObject, NSMenuDelegate {
         } else {
             statsStreakItem.isHidden = true
         }
+    }
+
+    private func updateProjectsDisplay() {
+        projectsSubmenu.removeAllItems()
+
+        let recentProjects = projects.recentProjects
+
+        if recentProjects.isEmpty {
+            projectsHeaderItem.title = "Projects"
+            let emptyItem = NSMenuItem(title: "No projects yet", action: nil, keyEquivalent: "")
+            emptyItem.isEnabled = false
+            projectsSubmenu.addItem(emptyItem)
+            return
+        }
+
+        projectsHeaderItem.title = "Projects (\(projects.projects.count))"
+
+        // Recent projects
+        let recentHeader = NSMenuItem(title: "Recent", action: nil, keyEquivalent: "")
+        recentHeader.isEnabled = false
+        projectsSubmenu.addItem(recentHeader)
+
+        for project in recentProjects {
+            let item = NSMenuItem(title: "  \(project.name)", action: #selector(openProjectInTerminal(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = project
+            item.image = statusIcon(for: project.status)
+            projectsSubmenu.addItem(item)
+        }
+
+        // Forgotten projects count
+        let forgottenCount = projects.forgottenProjects.count
+        if forgottenCount > 0 {
+            projectsSubmenu.addItem(NSMenuItem.separator())
+            let forgottenItem = NSMenuItem(title: "\(forgottenCount) forgotten project\(forgottenCount == 1 ? "" : "s")", action: nil, keyEquivalent: "")
+            forgottenItem.isEnabled = false
+            forgottenItem.image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: nil)
+            projectsSubmenu.addItem(forgottenItem)
+        }
+    }
+
+    private func statusIcon(for status: ClaudeProject.ProjectStatus) -> NSImage? {
+        let name: String
+        switch status {
+        case .active: name = "circle.fill"
+        case .paused: name = "pause.circle.fill"
+        case .completed: name = "checkmark.circle.fill"
+        }
+        return NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: 10, weight: .regular))
+    }
+
+    @objc private func openProjectInTerminal(_ sender: NSMenuItem) {
+        guard let project = sender.representedObject as? ClaudeProject else { return }
+        projects.openInTerminal(project)
     }
 
     private func updateResourcesDisplay() {
