@@ -62,13 +62,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 .environmentObject(settings)
 
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 500, height: 580),
+                contentRect: NSRect(x: 0, y: 0, width: 540, height: 620),
                 styleMask: [.titled, .closable, .resizable, .miniaturizable],
                 backing: .buffered,
                 defer: false
             )
             window.title = "Claude Buddy"
-            window.minSize = NSSize(width: 450, height: 500)
+            window.minSize = NSSize(width: 500, height: 550)
             window.contentView = NSHostingView(rootView: settingsView)
             window.center()
             window.isReleasedWhenClosed = false

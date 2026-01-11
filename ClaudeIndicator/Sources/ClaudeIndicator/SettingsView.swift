@@ -39,7 +39,7 @@ struct SettingsView: View {
                 }
                 .tag(4)
         }
-        .frame(minWidth: 450, idealWidth: 520, minHeight: 500, idealHeight: 600)
+        .frame(minWidth: 500, idealWidth: 540, minHeight: 550, idealHeight: 620)
     }
 
     // MARK: - Appearance Tab
