@@ -225,7 +225,9 @@ class StatusBarController: NSObject, NSMenuDelegate {
         resources.loadResources()
         resourcesSubmenu.removeAllItems()
 
-        let totalCount = resources.totalResourceCount
+        let claudeCount = resources.totalResourceCount
+        let detectedCount = resources.detectedPorts.count
+        let totalCount = claudeCount + detectedCount
 
         if totalCount == 0 {
             resourcesHeaderItem.title = "Resources"
@@ -237,9 +239,9 @@ class StatusBarController: NSObject, NSMenuDelegate {
 
         resourcesHeaderItem.title = "Resources (\(totalCount))"
 
-        // Ports section
+        // Claude-registered Ports section
         if !resources.ports.isEmpty {
-            let portsHeader = NSMenuItem(title: "Ports", action: nil, keyEquivalent: "")
+            let portsHeader = NSMenuItem(title: "Claude Ports", action: nil, keyEquivalent: "")
             portsHeader.isEnabled = false
             portsHeader.image = NSImage(systemSymbolName: "network", accessibilityDescription: nil)
             resourcesSubmenu.addItem(portsHeader)
@@ -296,6 +298,35 @@ class StatusBarController: NSObject, NSMenuDelegate {
                 item.image = NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: nil)?
                     .withSymbolConfiguration(.init(pointSize: 10, weight: .regular))
                 resourcesSubmenu.addItem(item)
+            }
+        }
+
+        // Auto-detected ports section (system ports)
+        if !resources.detectedPorts.isEmpty {
+            if claudeCount > 0 {
+                resourcesSubmenu.addItem(NSMenuItem.separator())
+            }
+
+            let detectedHeader = NSMenuItem(title: "Active Ports (System)", action: nil, keyEquivalent: "")
+            detectedHeader.isEnabled = false
+            detectedHeader.image = NSImage(systemSymbolName: "antenna.radiowaves.left.and.right", accessibilityDescription: nil)
+            resourcesSubmenu.addItem(detectedHeader)
+
+            // Only show first 10 detected ports to keep menu manageable
+            for port in resources.detectedPorts.prefix(10) {
+                let label = port.projectName ?? port.processName
+                let item = NSMenuItem(title: "  :\(port.port) — \(label)", action: nil, keyEquivalent: "")
+                item.isEnabled = false
+                item.image = NSImage(systemSymbolName: "circle.fill", accessibilityDescription: nil)?
+                    .withSymbolConfiguration(.init(pointSize: 8, weight: .regular))
+                item.image?.isTemplate = false
+                resourcesSubmenu.addItem(item)
+            }
+
+            if resources.detectedPorts.count > 10 {
+                let moreItem = NSMenuItem(title: "  ... and \(resources.detectedPorts.count - 10) more", action: nil, keyEquivalent: "")
+                moreItem.isEnabled = false
+                resourcesSubmenu.addItem(moreItem)
             }
         }
 

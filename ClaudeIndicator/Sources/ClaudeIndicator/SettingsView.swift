@@ -2,8 +2,8 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject var settings: Settings
-    @StateObject private var resourcesManager = ResourcesManager.shared
-    @StateObject private var projectsManager = ProjectsManager.shared
+    @ObservedObject private var resourcesManager = ResourcesManager.shared
+    @ObservedObject private var projectsManager = ProjectsManager.shared
     @State private var showingPreview = false
     @State private var selectedTab = 0
 
@@ -388,7 +388,10 @@ struct SettingsView: View {
                                 }
                             }
                             Spacer()
-                            Button(action: { resourcesManager.loadResources() }) {
+                            Button(action: {
+                                resourcesManager.loadResources()
+                                resourcesManager.scanForPorts()
+                            }) {
                                 Image(systemName: "arrow.clockwise")
                             }
                             .buttonStyle(.plain)
@@ -407,9 +410,9 @@ struct SettingsView: View {
                     }
                 }
 
-                // Ports
+                // Registered Ports
                 if !resourcesManager.ports.isEmpty {
-                    SettingsSection(title: "Ports", icon: "network") {
+                    SettingsSection(title: "Registered Ports", icon: "network") {
                         ForEach(resourcesManager.ports) { port in
                             SettingsRow {
                                 HStack {
@@ -432,6 +435,41 @@ struct SettingsView: View {
                                     Spacer()
                                     Circle()
                                         .fill(resourcesManager.isPortInUse(port.port) ? Color.green : Color.orange)
+                                        .frame(width: 8, height: 8)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Detected Ports (auto-scanned system ports)
+                if !resourcesManager.detectedPorts.isEmpty {
+                    SettingsSection(title: "System Ports (Auto-detected)", icon: "antenna.radiowaves.left.and.right") {
+                        ForEach(resourcesManager.detectedPorts) { port in
+                            SettingsRow {
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        HStack(spacing: 6) {
+                                            Text(":\(port.port)")
+                                                .font(.system(.body, design: .monospaced))
+                                                .fontWeight(.medium)
+                                            Text(port.projectName ?? port.processName)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        if let workingDir = port.workingDirectory {
+                                            Text(workingDir)
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                                .lineLimit(1)
+                                                .truncationMode(.middle)
+                                        }
+                                    }
+                                    Spacer()
+                                    Text("PID \(port.pid)")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    Circle()
+                                        .fill(Color.green)
                                         .frame(width: 8, height: 8)
                                 }
                             }
@@ -494,13 +532,13 @@ struct SettingsView: View {
                 }
 
                 // Empty state
-                if resourcesManager.totalResourceCount == 0 {
+                if resourcesManager.totalResourceCount == 0 && resourcesManager.detectedPorts.isEmpty {
                     SettingsSection(title: "No Resources", icon: "tray") {
                         SettingsRow {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("No shared resources are currently registered.")
+                                Text("No active ports or shared resources detected.")
                                     .foregroundColor(.secondary)
-                                Text("Claude agents can register ports, databases, and simulators in ~/.claude/shared-resources.json")
+                                Text("Ports are auto-detected when services start. Claude agents can also register resources in ~/.claude/shared-resources.json")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
